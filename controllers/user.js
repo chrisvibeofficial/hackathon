@@ -225,10 +225,16 @@ exports.login = async (req, res) => {
       })
     };
 
+    if (user.isVerified !== true) {
+      return res.status(400).json({
+        message: 'Your account is not verified'
+      })
+    };
+
     const token = jwt.sign({ userId: user._id }, jwtSecret, { expiresIn: '1day' });
 
     res.status(200).json({
-      message: 'Log in successfully',
+      message: 'Login successfully',
       token
     })
   } catch (error) {
@@ -321,6 +327,120 @@ exports.resetPassword = async (req, res) => {
 
     res.status(500).json({
       message: 'Error resetting password'
+    })
+  }
+};
+
+
+exports.getUsers = async (req, res) => {
+  try {
+    const users = await userModel.find({ isAdmin: false });
+
+    if (users.length < 1) {
+      return res.status(404).json({
+        message: 'No user found'
+      })
+    };
+
+    res.status(200).json({
+      message: 'All users',
+      total: users.length,
+      data: users
+    })
+  } catch (error) {
+    console.log(error.message);
+
+    if (error instanceof jwt.JsonWebTokenError) {
+      res.status(400).json({
+        message: 'Session expired, please login to continue'
+      })
+    };
+
+    res.status(500).json({
+      message: 'Error getting all users'
+    })
+  }
+};
+
+
+exports.getUser = async (req, res) => {
+  try {
+    const userId = req.user._id
+    const user = await userModel.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({
+        message: 'Account not found'
+      })
+    };
+
+    res.status(200).json({
+      message: 'User',
+      data: user
+    })
+  } catch (error) {
+    console.log(error.message);
+
+    if (error instanceof jwt.JsonWebTokenError) {
+      res.status(400).json({
+        message: 'Session expired, please login to continue'
+      })
+    };
+
+    res.status(500).json({
+      message: 'Error getting user'
+    })
+  }
+};
+
+
+exports.changePassword = async (req, res) => {
+  try {
+    const userId = req.user._id
+    console.log(req.user);
+    
+    const { password, newPassword, confirmPassword } = req.body;
+    const user = await userModel.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({
+        message: 'Account not found'
+      })
+    };
+
+    const correctPassword = await bcrypt.compare(password, user.password);
+
+    if (!correctPassword) {
+      return res.status(400).json({
+        message: 'Incorrect password'
+      })
+    };
+
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({
+        message: 'Password does not match'
+      })
+    };
+
+    const saltedRound = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, saltedRound);
+    user.password = hashedPassword;
+    await user.save();
+
+    res.status(200).json({
+      message: 'Password changed successfully'
+    });
+  } catch (error) {
+    console.log(error.message);
+
+    if (error instanceof jwt.JsonWebTokenError) {
+      res.status(400).json({
+        message: 'Session expired, please login to continue'
+      })
+    };
+
+    res.status(500).json({
+      message: 'Error changing password'
     })
   }
 };
