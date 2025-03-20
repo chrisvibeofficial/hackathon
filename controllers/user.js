@@ -83,7 +83,9 @@ exports.registerUser = async (req, res) => {
     const mailDetails = {
       email: user.email,
       subject: 'ACCOUNT VERIFICATION',
-      html
+      html,
+      id: user._id,
+      public_id: user.profilePic.public_id
     };
 
     await mail_sender(mailDetails);
@@ -186,6 +188,92 @@ exports.verifyUser = async (req, res) => {
 };
 
 
+exports.forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    const user = await userModel.findOne({ email: email.toLowerCase() });
+
+    if (!user) {
+      return res.status(404).json({
+        message: 'Account not found'
+      })
+    };
+
+    const token = jwt.sign({ userId: user._id }, jwtSecret, { expiresIn: '5mins' });
+    const link = `${req.protocol}://${req.get('host')}/v1/reset/password/${token}`;
+    const firstName = user.fullname.split(' ')[0];
+    const html = reset(link, firstName);
+
+    const mailDetails = {
+      email: user.email,
+      subject: 'RESET PASSWORD',
+      html
+    };
+
+    await mail_sender(mailDetails);
+
+    res.status(200).json({
+      message: 'Reset link has been sent to email address'
+    })
+  } catch (error) {
+    console.log(error.message);
+    res.status(500).json({
+      message: 'Error forgetting password'
+    })
+  }
+};
+
+
+exports.resetPassword = async (req, res) => {
+  try {
+    const { token } = req.params;
+    const { newPassword, confirmPassword } = req.body;
+
+    if (!token) {
+      return res.status(404).json({
+        message: 'Token not found'
+      })
+    };
+
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({
+        message: 'Password does not match'
+      })
+    };
+
+    const { userId } = jwt.verify(token, jwtSecret);
+    const user = await userModel.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({
+        message: 'Account not found'
+      })
+    };
+
+    const saltedRound = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, saltedRound);
+    user.password = hashedPassword;
+    await user.save();
+
+    res.status(200).json({
+      message: 'Password changed successfully'
+    })
+  } catch (error) {
+    console.log(error.message);
+
+    if (error instanceof jwt.JsonWebTokenError) {
+      return res.status(400).json({
+        message: 'Session has expired, re-enter your email address'
+      })
+    };
+
+    res.status(500).json({
+      message: 'Error resetting password'
+    })
+  }
+};
+
+
 exports.login = async (req, res) => {
   try {
     const { username, email, phoneNumber, password } = req.body;
@@ -231,7 +319,16 @@ exports.login = async (req, res) => {
       })
     };
 
+    if (user.isRestricted === true) {
+      return res.status(400).json({
+        message: 'Your account is restricted'
+      })
+    };
+
     const token = jwt.sign({ userId: user._id }, jwtSecret, { expiresIn: '1day' });
+    user.generatedToken.push(token);
+    user.isLoggedIn = true;
+    await user.save();
 
     res.status(200).json({
       message: 'Login successfully',
@@ -246,87 +343,47 @@ exports.login = async (req, res) => {
 };
 
 
-exports.forgotPassword = async (req, res) => {
+exports.logout = async (req, res) => {
   try {
-    const { email } = req.body;
-    const user = await userModel.findOne({ email: email.toLowerCase() });
+    const auth = req.headers.authorization;
 
-    if (!user) {
+    if (!auth) {
       return res.status(404).json({
-        message: 'Account not found'
+        message: 'Token not passed to headers'
       })
     };
-
-    const token = jwt.sign({ userId: user._id }, jwtSecret, { expiresIn: '5mins' });
-    const link = `${req.protocol}://${req.get('host')}/v1/reset/password/${token}`;
-    const firstName = user.fullname.split(' ')[0];
-    const html = reset(link, firstName);
-
-    const mailDetails = {
-      email: user.email,
-      subject: 'RESET PASSWORD',
-      html
-    };
-
-    await mail_sender(mailDetails);
-
-    res.status(200).json({
-      message: 'Reset link has been sent to email address'
-    })
-  } catch (error) {
-    console.log(error.message);
-    res.status(500).json({
-      message: 'Error forgetting password'
-    })
-  }
-};
-
-
-exports.resetPassword = async (req, res) => {
-  try {
-    const { token } = req.params;
-    const { password, confirmPassword } = req.body;
-
-    if (!token) {
-      return res.status(404).json({
-        message: 'Token not found'
-      })
-    };
-
-    if (password !== confirmPassword) {
-      return res.status(400).json({
-        message: 'Password does not match'
-      })
-    };
-
-    const { userId } = jwt.verify(token, jwtSecret);
+    
+    const token = auth.split(' ')[1];
+    const { userId } = token;
     const user = await userModel.findById(userId);
 
     if (!user) {
       return res.status(404).json({
-        message: 'Account not found'
+        message: 'No account found'
       })
     };
 
-    const saltedRound = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, saltedRound);
-    user.password = hashedPassword;
+    if (user.isLoggedIn !== true) {
+      return res.status(400).json({
+        message: 'Account is logged out already'
+      })
+    };
+
+    if (user.generatedToken.includes(token) && user.isLoggedIn === true) {
+      user.isLoggedIn = false
+    } else {
+      user.isLoggedIn = true
+    };
+
     await user.save();
 
     res.status(200).json({
-      message: 'Password changed successfully'
+      message: 'Logout successfully'
     })
   } catch (error) {
     console.log(error.message);
-
-    if (error instanceof jwt.JsonWebTokenError) {
-      return res.status(400).json({
-        message: 'Session has expired, re-enter your email address'
-      })
-    };
-
     res.status(500).json({
-      message: 'Error resetting password'
+      message: 'Error logging user out'
     })
   }
 };
@@ -397,8 +454,7 @@ exports.getUser = async (req, res) => {
 exports.changePassword = async (req, res) => {
   try {
     const userId = req.user._id
-    console.log(req.user);
-    
+
     const { password, newPassword, confirmPassword } = req.body;
     const user = await userModel.findById(userId);
 
@@ -441,6 +497,136 @@ exports.changePassword = async (req, res) => {
 
     res.status(500).json({
       message: 'Error changing password'
+    })
+  }
+};
+
+
+exports.updateProfilePic = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const file = req.file;
+    const user = await userModel.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({
+        message: 'Account not found'
+      })
+    };
+
+    const data = {
+      profilePic: user.profilePic
+    };
+
+    if (file && file.path) {
+      await cloudinary.uploader.destroy(user.profilePic.public_id);
+      const profilePicresult = await cloudinary.uploader.upload(file.path);
+      fs.unlinkSync(file.path);
+
+      data.profilePic = {
+        public_id: profilePicresult.public_id,
+        image_url: profilePicresult.secure_url
+      };
+
+      const updatedProfilePic = await userModel.findByIdAndUpdate(user._id, data, { new: true });
+
+      res.status(200).json({
+        message: 'Profile picture updated successfully',
+        data: updatedProfilePic
+      })
+    }
+  } catch (error) {
+    console.log(error.message);
+
+    if (error instanceof jwt.JsonWebTokenError) {
+      res.status(400).json({
+        message: 'Session expired, please login to continue'
+      })
+    };
+
+    res.status(500).json({
+      message: 'Error updating profile picture'
+    })
+  }
+};
+
+
+exports.updateAddress = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { address } = req.body;
+    const user = await userModel.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({
+        message: 'Account not found'
+      })
+    };
+
+    const userAddress = address.split(' ');
+
+
+    const data = {
+      number: userAddress[0],
+      name: userAddress[1],
+      lga: userAddress[2],
+      state: userAddress[3]
+    }
+
+    user.address = data
+    await user.save();
+
+    res.status(200).json({
+      message: 'Address updated successfully',
+      data: updatedAddress
+    })
+  } catch (error) {
+    console.log(error);
+
+    if (error instanceof jwt.JsonWebTokenError) {
+      res.status(400).json({
+        message: 'Session expired, please login to continue'
+      })
+    };
+
+    res.status(500).json({
+      message: 'Error updating address'
+    })
+  }
+};
+
+
+exports.deleteUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await userModel.findById(id);
+
+    if (!user) {
+      return res.status(404).json({
+        message: 'User does not exist'
+      })
+    };
+
+    const deletedUser = await userModel.findByIdAndDelete(user._id);
+
+    if (deletedUser) {
+      await cloudinary.uploader.destroy(user.profilePic.public_id);
+    };
+
+    res.status(200).json({
+      message: 'Account deleted successfully'
+    })
+  } catch (error) {
+    console.log(error.message);
+
+    if (error instanceof jwt.JsonWebTokenError) {
+      res.status(400).json({
+        message: 'Session expired, please login to continue'
+      })
+    };
+
+    res.status(500).json({
+      message: 'Error deleting account'
     })
   }
 };
