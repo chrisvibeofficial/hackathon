@@ -1,6 +1,8 @@
 const nodemailer = require("nodemailer");
+const userModel = require('../models/user');
+const cloudinary = require('../configs/cloudinary');
 
-exports.mail_sender = async (options) => {
+exports.mail_sender = (options) => {
   const transporter = nodemailer.createTransport({
     host: "smtp.gmail.com",
     service: process.env.NODEMAILER_SERVICE,
@@ -11,7 +13,7 @@ exports.mail_sender = async (options) => {
       pass: process.env.APP_PASSWORD,
     },
   });
-  
+
   // async..await is not allowed in global scope, must use a wrapper
   async function main() {
     // send mail with defined transport object
@@ -21,10 +23,17 @@ exports.mail_sender = async (options) => {
       subject: options.subject, // Subject line
       html: options.html, // html body
     });
-  
+  };
+
+  main().then(() => {
     console.log("Message has been sent to: ", options.email);
     // Message sent: <d786aa62-4e0a-070a-47ed-0b0666549519@ethereal.email>
-  }
-  
-  main().catch(console.error);
-}
+  }).catch(async (error) => {
+    console.log(error.message);
+    if (error.code === 'EENVELOP') {
+      await userModel.findById(options.id);
+      await cloudinary.uploader.destroy(options.public_id);
+    }
+  });
+};
+

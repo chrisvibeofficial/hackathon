@@ -42,21 +42,30 @@ const userSchema = new mongoose.Schema({
     public_id: { type: String, require: true },
     image_url: { type: String, require: true }
   },
+  isLoggedIn: {
+    type: Boolean,
+    default: false
+  },
+  generatedToken: [{
+    type: String,
+    require: true
+  }],
   isAdmin: {
     type: Boolean,
-    require: true,
     default: false
   },
   isVerified: {
     type: Boolean,
-    require: true,
     default: false
   },
   isRecommended: {
     type: Boolean,
-    require: true,
     default: false
   },
+  isRestricted: {
+    type: Boolean,
+    default: false
+  }
 });
 
 const userModel = mongoose.model('users', userSchema);
