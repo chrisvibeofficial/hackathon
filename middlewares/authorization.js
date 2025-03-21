@@ -21,7 +21,8 @@ exports.authenticate = async (req, res, next) => {
       })
     };
 
-    const { userId } = jwt.verify(token, jwtSecret);
+    const decodedToken = jwt.verify(token, jwtSecret);
+    const { userId } = decodedToken;
     const user = await userModel.findById(userId);
 
     if (!user) {
@@ -30,7 +31,13 @@ exports.authenticate = async (req, res, next) => {
       })
     };
 
-    req.user = user;
+    if (user.isLoggedIn !== decodedToken.isLoggedIn) {
+      return res.status(401).json({
+        message: 'Authentication failed: User is not logged in'
+      })
+    };
+
+    req.user = decodedToken;
     next();
   } catch (error) {
     console.log(error.message);
@@ -66,7 +73,8 @@ exports.authorize = async (req, res, next) => {
       })
     };
 
-    const { userId } = jwt.verify(token, jwtSecret);
+    const decodedToken = jwt.verify(token, jwtSecret);
+    const { userId } = decodedToken;
     const user = await userModel.findById(userId);
 
     if (!user) {
@@ -81,7 +89,13 @@ exports.authorize = async (req, res, next) => {
       })
     };
 
-    req.user = user;
+    if (user.isLoggedIn !== decodedToken.isLoggedIn) {
+      return res.status(401).json({
+        message: 'Authentication failed: User is not logged in'
+      })
+    };
+
+    req.user = decodedToken;
     next();
   } catch (error) {
     console.log(error.message);

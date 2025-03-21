@@ -325,9 +325,9 @@ exports.login = async (req, res) => {
       })
     };
 
-    const token = jwt.sign({ userId: user._id }, jwtSecret, { expiresIn: '1day' });
-    user.generatedToken.push(token);
     user.isLoggedIn = true;
+    const token = jwt.sign({ userId: user._id, isLoggedIn: user.isLoggedIn }, jwtSecret, { expiresIn: '1day' });
+    // user.generatedToken.push(token);
     await user.save();
 
     res.status(200).json({
@@ -345,36 +345,16 @@ exports.login = async (req, res) => {
 
 exports.logout = async (req, res) => {
   try {
-    const auth = req.headers.authorization;
-
-    if (!auth) {
-      return res.status(404).json({
-        message: 'Token not passed to headers'
-      })
-    };
-    
-    const token = auth.split(' ')[1];
-    const { userId } = token;
+    const { userId } = req.user;
     const user = await userModel.findById(userId);
 
     if (!user) {
       return res.status(404).json({
-        message: 'No account found'
+        message: 'User not found'
       })
     };
 
-    if (user.isLoggedIn !== true) {
-      return res.status(400).json({
-        message: 'Account is logged out already'
-      })
-    };
-
-    if (user.generatedToken.includes(token) && user.isLoggedIn === true) {
-      user.isLoggedIn = false
-    } else {
-      user.isLoggedIn = true
-    };
-
+    user.isLoggedIn = false
     await user.save();
 
     res.status(200).json({
@@ -422,7 +402,7 @@ exports.getUsers = async (req, res) => {
 
 exports.getUser = async (req, res) => {
   try {
-    const userId = req.user._id
+    const { userId } = req.user;
     const user = await userModel.findById(userId);
 
     if (!user) {
@@ -453,8 +433,7 @@ exports.getUser = async (req, res) => {
 
 exports.changePassword = async (req, res) => {
   try {
-    const userId = req.user._id
-
+    const { userId } = req.user;
     const { password, newPassword, confirmPassword } = req.body;
     const user = await userModel.findById(userId);
 
@@ -504,7 +483,7 @@ exports.changePassword = async (req, res) => {
 
 exports.updateProfilePic = async (req, res) => {
   try {
-    const userId = req.user._id;
+    const { userId } = req.user;
     const file = req.file;
     const user = await userModel.findById(userId);
 
@@ -553,7 +532,7 @@ exports.updateProfilePic = async (req, res) => {
 
 exports.updateAddress = async (req, res) => {
   try {
-    const userId = req.user._id;
+    const { userId } = req.user;
     const { address } = req.body;
     const user = await userModel.findById(userId);
 
