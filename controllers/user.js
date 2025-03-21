@@ -345,16 +345,7 @@ exports.login = async (req, res) => {
 
 exports.logout = async (req, res) => {
   try {
-    const auth = req.headers.authorization;
-    
-    if (!auth) {
-      return res.status(404).json({
-        message: 'Token not passed to header'
-      })
-    };
-
-    const token = auth.split(' ')[1];
-    const {userId} = jwt.verify(token, jwtSecret);
+    const { userId } = req.user;
     const user = await userModel.findById(userId);
 
     if (!user) {
@@ -411,7 +402,7 @@ exports.getUsers = async (req, res) => {
 
 exports.getUser = async (req, res) => {
   try {
-    const userId = req.user._id
+    const { userId } = req.user;
     const user = await userModel.findById(userId);
 
     if (!user) {
@@ -442,8 +433,7 @@ exports.getUser = async (req, res) => {
 
 exports.changePassword = async (req, res) => {
   try {
-    const userId = req.user._id
-
+    const { userId } = req.user;
     const { password, newPassword, confirmPassword } = req.body;
     const user = await userModel.findById(userId);
 
@@ -493,7 +483,7 @@ exports.changePassword = async (req, res) => {
 
 exports.updateProfilePic = async (req, res) => {
   try {
-    const userId = req.user._id;
+    const { userId } = req.user;
     const file = req.file;
     const user = await userModel.findById(userId);
 
@@ -542,7 +532,7 @@ exports.updateProfilePic = async (req, res) => {
 
 exports.updateAddress = async (req, res) => {
   try {
-    const userId = req.user._id;
+    const { userId } = req.user;
     const { address } = req.body;
     const user = await userModel.findById(userId);
 
