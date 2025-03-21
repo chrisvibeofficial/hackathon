@@ -1,4 +1,4 @@
-const { createPlan, getPlans, getPlan, updatePlan, deletePlan } = require('../../controllers/plan');
+const { createPlan, getPlans, getPlan, updatePlan, deletePlan } = require('../controllers/plan');
 const { authorize, authenticate } = require('../middlewares/authorization');
 
 const router = require('express').Router();

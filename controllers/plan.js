@@ -1,4 +1,4 @@
-const planModel = require('../../models/plan');
+const planModel = require('../models/plan');
 
 
 exports.createPlan = async (req, res) => {
@@ -17,7 +17,7 @@ exports.createPlan = async (req, res) => {
     if (duration > 1) {
       plan = new planModel({
         planName,
-        amount,
+        amount: amount * duration,
         description,
         duration: `${duration} Months`
       })
@@ -128,7 +128,7 @@ exports.updatePlan = async (req, res) => {
 
 exports.deletePlan = async (req, res) => {
   try {
-    const {planId} = req.params;
+    const { planId } = req.params;
     const plan = await planModel.findById(planId);
 
     if (!plan) {

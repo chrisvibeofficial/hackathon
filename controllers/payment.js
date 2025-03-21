@@ -9,7 +9,8 @@ const axios = require('axios');
 
 exports.initializePayment = async (req, res) => {
   try {
-    const { userId, planId } = req.params;
+    const { userId } = req.user;
+    const { planId } = req.params;
     const user = await userModel.findById(userId);
 
     if (!user) {
@@ -39,7 +40,7 @@ exports.initializePayment = async (req, res) => {
       }
     });
 
-    const { data } = response;
+    const { data } = response?.data;
 
     const payment = new paymentModel({
       userId: user._id,
@@ -53,8 +54,8 @@ exports.initializePayment = async (req, res) => {
     res.status(200).json({
       message: 'Payment initialized successfully',
       data: {
-        reference: data.data.reference,
-        checkout_url: data.data.checkout_url
+        reference: data.reference,
+        checkout_url: data.checkout_url
       }
     })
   } catch (error) {
@@ -83,7 +84,9 @@ exports.verifyPayment = async (req, res) => {
       }
     });
 
-    // const {data} = response;
+    const { data } = response?.data;
+    console.log(data);
+
   } catch (error) {
     console.log(error);
     res.status(500).json({
