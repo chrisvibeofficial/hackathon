@@ -325,9 +325,9 @@ exports.login = async (req, res) => {
       })
     };
 
-    const token = jwt.sign({ userId: user._id }, jwtSecret, { expiresIn: '1day' });
-    user.generatedToken.push(token);
     user.isLoggedIn = true;
+    const token = jwt.sign({ userId: user._id, isLoggedIn: user.isLoggedIn }, jwtSecret, { expiresIn: '1day' });
+    // user.generatedToken.push(token);
     await user.save();
 
     res.status(200).json({
@@ -346,35 +346,24 @@ exports.login = async (req, res) => {
 exports.logout = async (req, res) => {
   try {
     const auth = req.headers.authorization;
-
+    
     if (!auth) {
       return res.status(404).json({
-        message: 'Token not passed to headers'
+        message: 'Token not passed to header'
       })
     };
-    
+
     const token = auth.split(' ')[1];
-    const { userId } = token;
+    const {userId} = jwt.verify(token, jwtSecret);
     const user = await userModel.findById(userId);
 
     if (!user) {
       return res.status(404).json({
-        message: 'No account found'
+        message: 'User not found'
       })
     };
 
-    if (user.isLoggedIn !== true) {
-      return res.status(400).json({
-        message: 'Account is logged out already'
-      })
-    };
-
-    if (user.generatedToken.includes(token) && user.isLoggedIn === true) {
-      user.isLoggedIn = false
-    } else {
-      user.isLoggedIn = true
-    };
-
+    user.isLoggedIn = false
     await user.save();
 
     res.status(200).json({
