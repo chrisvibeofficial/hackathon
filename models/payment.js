@@ -5,11 +5,19 @@ const paymentSchema = new mongoose.Schema({
     type: mongoose.SchemaTypes.ObjectId,
     require: true
   },
+  userName: {
+    type: String,
+    require: true
+  },
   plan: {
     type: String,
     require: true
   },
   amount: {
+    type: String,
+    require: true
+  },
+  duration: {
     type: String,
     require: true
   },

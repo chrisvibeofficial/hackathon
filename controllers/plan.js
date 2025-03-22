@@ -45,7 +45,7 @@ exports.createPlan = async (req, res) => {
 };
 
 
-exports.getPlans = async (req, res) => {
+exports.getAllPlans = async (req, res) => {
   try {
     const plans = await planModel.find();
 

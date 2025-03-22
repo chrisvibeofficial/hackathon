@@ -44,8 +44,10 @@ exports.initializePayment = async (req, res) => {
 
     const payment = new paymentModel({
       userId: user._id,
+      userName: user.fullname,
       plan: plan.planName,
-      amount: plan.amount,
+      amount: `#${plan.amount}`,
+      duration: plan.duration,
       reference: data.reference
     });
 
@@ -78,15 +80,29 @@ exports.verifyPayment = async (req, res) => {
       })
     };
 
-    const response = await axios.get(`https://website_redirect_url/?reference=${reference}`, {
+    const response = await axios.get(`https://api.korapay.com/merchant/api/v1/charges/${reference}`, {
       headers: {
         Authorization: `Bearer ${paymentSecretKey}`
       }
     });
 
-    const { data } = response?.data;
-    console.log(data);
+    const { data } = response;
 
+    if (data.status && data.data.status === 'success') {
+      payment.status = 'Success'
+      await payment.save();
+
+      res.status(200).json({
+        message: 'Transaction is successful'
+      })
+    } else {
+      payment.status = 'Failed'
+      await payment.save();
+
+      res.status(200).json({
+        message: 'Transaction failed'
+      })
+    }
   } catch (error) {
     console.log(error);
     res.status(500).json({
