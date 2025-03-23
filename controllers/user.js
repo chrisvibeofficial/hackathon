@@ -10,7 +10,7 @@ const jwtSecret = process.env.JWT_SECRET;
 
 exports.registerUser = async (req, res) => {
   try {
-    const { fullname, email, username, phoneNumber, gender, age, password, confirmPassword, address } = req.body;
+    const { fullname, email, username, phoneNumber, gender, age, password, confirmPassword} = req.body;
     const file = req.file;
 
     if (password !== confirmPassword) {
@@ -47,8 +47,6 @@ exports.registerUser = async (req, res) => {
       })
     };
 
-    const userAddress = address.split(' ');
-
     const saltedRound = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, saltedRound);
 
@@ -63,12 +61,6 @@ exports.registerUser = async (req, res) => {
       gender,
       age: `${age} years`,
       password: hashedPassword,
-      address: {
-        number: userAddress[0],
-        name: userAddress[1],
-        lga: userAddress[2],
-        state: userAddress[3]
-      },
       profilePic: {
         public_id: profilePicResult.public_id,
         image_url: profilePicResult.secure_url
@@ -327,7 +319,6 @@ exports.login = async (req, res) => {
 
     user.isLoggedIn = true;
     const token = jwt.sign({ userId: user._id, isLoggedIn: user.isLoggedIn }, jwtSecret, { expiresIn: '1day' });
-    // user.generatedToken.push(token);
     await user.save();
 
     res.status(200).json({
@@ -388,7 +379,7 @@ exports.getUsers = async (req, res) => {
     console.log(error.message);
 
     if (error instanceof jwt.JsonWebTokenError) {
-      res.status(400).json({
+      return res.status(400).json({
         message: 'Session expired, please login to continue'
       })
     };
@@ -419,7 +410,7 @@ exports.getUser = async (req, res) => {
     console.log(error.message);
 
     if (error instanceof jwt.JsonWebTokenError) {
-      res.status(400).json({
+      return res.status(400).json({
         message: 'Session expired, please login to continue'
       })
     };
@@ -469,7 +460,7 @@ exports.changePassword = async (req, res) => {
     console.log(error.message);
 
     if (error instanceof jwt.JsonWebTokenError) {
-      res.status(400).json({
+      return res.status(400).json({
         message: 'Session expired, please login to continue'
       })
     };
@@ -518,7 +509,7 @@ exports.updateProfilePic = async (req, res) => {
     console.log(error.message);
 
     if (error instanceof jwt.JsonWebTokenError) {
-      res.status(400).json({
+      return res.status(400).json({
         message: 'Session expired, please login to continue'
       })
     };
@@ -563,7 +554,7 @@ exports.updateAddress = async (req, res) => {
     console.log(error);
 
     if (error instanceof jwt.JsonWebTokenError) {
-      res.status(400).json({
+      return res.status(400).json({
         message: 'Session expired, please login to continue'
       })
     };
@@ -599,7 +590,7 @@ exports.deleteUser = async (req, res) => {
     console.log(error.message);
 
     if (error instanceof jwt.JsonWebTokenError) {
-      res.status(400).json({
+      return res.status(400).json({
         message: 'Session expired, please login to continue'
       })
     };

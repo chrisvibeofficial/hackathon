@@ -1,10 +1,11 @@
 const { registerUser, verifyUser, login, forgotPassword, resetPassword, getUsers, getUser, changePassword, updateProfilePic, updateAddress, deleteUser, logout } = require('../controllers/user');
 const { authorize, authenticate } = require('../middlewares/authorization');
+const { registerValidation } = require('../middlewares/validator');
 const uploads = require('../utils/multer');
 
 const router = require('express').Router();
 
-router.post('/register', uploads.single('profilePic'), registerUser);
+router.post('/register', uploads.single('profilePic'), registerValidation, registerUser);
 router.get('/verify/user/:token', verifyUser);
 router.post('/forgot/password', forgotPassword);
 router.post('/reset/password/:token', resetPassword);

@@ -43,13 +43,13 @@ exports.authenticate = async (req, res, next) => {
     console.log(error.message);
 
     if (error instanceof jwt.JsonWebTokenError) {
-      res.status(400).json({
+      return res.status(400).json({
         message: 'Session expired, please login to continue'
       })
     };
 
     res.status(500).json({
-      message: 'Authentication failed'
+      message: 'Error authenticating user'
     })
   }
 };
@@ -101,13 +101,13 @@ exports.authorize = async (req, res, next) => {
     console.log(error.message);
 
     if (error instanceof jwt.JsonWebTokenError) {
-      res.status(400).json({
+      return res.status(400).json({
         message: 'Session expired, please login to continue'
       })
     };
 
     res.status(500).json({
-      message: 'Authorization failed'
+      message: 'Error authorizating user'
     })
   }
 };

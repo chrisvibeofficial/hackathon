@@ -32,15 +32,9 @@ const userSchema = new mongoose.Schema({
     type: String,
     require: true,
   },
-  address: {
-    number: { type: String, require: true },
-    name: { type: String, require: true },
-    lga: { type: String, require: true },
-    state: { type: String, require: true },
-  },
   profilePic: {
-    public_id: { type: String, require: true },
-    image_url: { type: String, require: true }
+    public_id: { type: String },
+    image_url: { type: String }
   },
   isLoggedIn: {
     type: Boolean,
@@ -61,7 +55,11 @@ const userSchema = new mongoose.Schema({
   isRestricted: {
     type: Boolean,
     default: false
-  }
+  },
+  subscriptionId: [{
+    type: mongoose.SchemaTypes.ObjectId,
+    ref: 'subscriptions'
+  }]
 });
 
 const userModel = mongoose.model('users', userSchema);

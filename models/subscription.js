@@ -1,9 +1,14 @@
 const mongoose = require('mongoose');
 
-const paymentSchema = new mongoose.Schema({
+const subscriptionSchema = new mongoose.Schema({
   userId: {
     type: mongoose.SchemaTypes.ObjectId,
+    ref: 'users',
     require: true
+  },
+  planId: {
+    type: mongoose.SchemaTypes.ObjectId,
+    ref: 'plans',
   },
   userName: {
     type: String,
@@ -26,12 +31,22 @@ const paymentSchema = new mongoose.Schema({
     enum: ['Pending', 'Success', 'Failed'],
     default: 'Pending'
   },
+  subscriptionDate: {
+    type: String,
+    require: true,
+    default: 'Processing'
+  },
+  expireDate: {
+    type: Number,
+    require: true,
+    default: 0
+  },
   reference: {
     type: String,
     require: true
   }
 });
 
-const paymentModel = mongoose.model('payments', paymentSchema);
+const subscriptionModel = mongoose.model('subscriptions', subscriptionSchema);
 
-module.exports = paymentModel;
+module.exports = subscriptionModel;
